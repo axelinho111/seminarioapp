@@ -1,1 +1,0 @@
- C:\\Users\\Usuario\\AndroidStudioProjects\\fitness2\\.dart_tool\\flutter_build\\9a2a2f35276f3c55ede97937d561e939\\native_assets.json: 

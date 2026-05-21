@@ -1,15 +1,30 @@
+# Archivos generados por Flutter (QA Clean)
+.dart_tool/
+build/
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub/
+node_modules/
+
+# Archivos de configuración de IDE
+.idea/
+.vscode/
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+*.ipr
+*.iws
+
+# Archivos de log y sistema
+*.log
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
+
+# Archivos sensibles (¡No subir llaves reales!)
+*.env
+lib/main.dart_backup
+
+# Windows específicos
+/build/
+/build/**
+app.dill
+app.dill.track.pb
