@@ -1,0 +1,165 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fitness-brain-webhook",
+        "options": {}
+      },
+      "id": "webhook-id",
+      "name": "Webhook Flutter",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [440, 240]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $node[\"Webhook Flutter\"].json[\"body\"][\"diet\"] === 'vegetarian' || $node[\"Webhook Flutter\"].json[\"body\"][\"diet\"] === 'vegan' }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "diet-check-id",
+      "name": "IF: Meat Free?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [660, 160]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $node[\"Webhook Flutter\"].json[\"body\"][\"injuries\"].length > 0 }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "injury-check-id",
+      "name": "IF: Has Injury?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [660, 320]
+    },
+    {
+      "parameters": {
+        "values": {
+          "boolean": [
+            {
+              "name": "safe_mode",
+              "value": true
+            }
+          ]
+        }
+      },
+      "id": "set-safe-id",
+      "name": "Activate Safe Mode",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4-turbo",
+        "prompt": "=Genera un plan de entrenamiento y nutrición personalizado.\nContexto del Usuario:\n- Peso: {{ $node[\"Webhook Flutter\"].json[\"body\"][\"weight\"] }} kg\n- Dieta: {{ $node[\"Webhook Flutter\"].json[\"body\"][\"diet\"] }}\n- Lesiones: {{ $node[\"Webhook Flutter\"].json[\"body\"][\"injuries\"].join(', ') }}\n- Modo Seguro: {{ $node[\"Activate Safe Mode\"].json[\"safe_mode\"] || false }}\n\nREGLA CRÍTICA: Si el Modo Seguro es true, filtra TODOS los ejercicios que pongan presión en las zonas lesionadas.",
+        "options": {}
+      },
+      "id": "ai-id",
+      "name": "AI: Plan Engine",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1100, 240]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": "fitness_plans",
+        "updateKey": "user_id",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $node[\"AI: Plan Engine\"].json[\"text\"] }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "completed"
+            }
+          ]
+        }
+      },
+      "id": "supabase-update-id",
+      "name": "Supabase: Save Plan",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1320, 240]
+    }
+  ],
+  "connections": {
+    "Webhook Flutter": {
+      "main": [
+        [
+          {
+            "node": "IF: Meat Free?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF: Has Injury?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Has Injury?": {
+      "main": [
+        [
+          {
+            "node": "Activate Safe Mode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Activate Safe Mode": {
+      "main": [
+        [
+          {
+            "node": "AI: Plan Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Meat Free?": {
+      "main": [
+        [
+          {
+            "node": "AI: Plan Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai-id": {
+      "main": [
+        [
+          {
+            "node": "supabase-update-id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

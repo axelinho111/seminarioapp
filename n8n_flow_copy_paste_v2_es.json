@@ -1,0 +1,211 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fitness-brain-webhook",
+        "options": {}
+      },
+      "id": "webhook-id",
+      "name": "Webhook Flutter",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "user_id",
+              "value": "={{ $node[\"Webhook Flutter\"].json[\"body\"][\"userId\"] }}"
+            },
+            {
+              "name": "diet",
+              "value": "={{ $node[\"Webhook Flutter\"].json[\"body\"][\"diet\"] }}"
+            }
+          ],
+          "number": [
+            {
+              "name": "weight",
+              "value": "={{ $node[\"Webhook Flutter\"].json[\"body\"][\"weight\"] }}"
+            }
+          ]
+        }
+      },
+      "id": "set-context-id",
+      "name": "Preparar Datos",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $node[\"Webhook Flutter\"].json[\"body\"][\"injuries\"].length > 0 }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "injury-check-id",
+      "name": "¿Tiene Lesiones?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "boolean": [
+            {
+              "name": "modo_seguro",
+              "value": true
+            }
+          ],
+          "string": [
+            {
+              "name": "aviso_seguridad",
+              "value": "⚠️ ATENCIÓN: Usuario con lesiones detectadas. Filtra ejercicios de alto impacto."
+            }
+          ]
+        }
+      },
+      "id": "set-safe-id",
+      "name": "Activar Modo Seguro",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [860, 200]
+    },
+    {
+      "parameters": {
+        "values": {
+          "boolean": [
+            {
+              "name": "modo_seguro",
+              "value": false
+            }
+          ]
+        }
+      },
+      "id": "set-no-safe-id",
+      "name": "Modo Estándar",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4-turbo",
+        "prompt": "=Actúa como un Entrenador Senior y Nutricionista.\n\nCONTEXTO DEL USUARIO:\n- Peso actual: {{ $node[\"Preparar Datos\"].json[\"weight\"] }} kg\n- Preferencia Alimentaria: {{ $node[\"Preparar Datos\"].json[\"diet\"] }}\n- Lesiones reportadas: {{ $node[\"Webhook Flutter\"].json[\"body\"][\"injuries\"].join(', ') }}\n- Modo de Seguridad: {{ $node[\"Activar Modo Seguro\"].json[\"modo_seguro\"] || $node[\"Modo Estándar\"].json[\"modo_seguro\"] }}\n\nTAREA:\n1. Crea una rutina de entrenamiento de 3 días.\n2. Diseña un plan de comidas diario basado en su dieta ({{ $node[\"Preparar Datos\"].json[\"diet\"] }}).\n3. REGLA CRÍTICA: Si el Modo de Seguridad es true, excluye ejercicios que pongan presión en: {{ $node[\"Webhook Flutter\"].json[\"body\"][\"injuries\"].join(', ') }}.\n\nFormato: Responde en JSON estructurado con secciones para 'entrenamiento' y 'nutricion'.",
+        "options": {}
+      },
+      "id": "ai-id",
+      "name": "IA: Generador de Plan",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": "fitness_plans",
+        "updateKey": "user_id",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $node[\"IA: Generador de Plan\"].json[\"text\"] }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "completed"
+            }
+          ]
+        }
+      },
+      "id": "supabase-update-id",
+      "name": "Supabase: Guardar Plan",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1350, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Flutter": {
+      "main": [
+        [
+          {
+            "node": "Preparar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Datos": {
+      "main": [
+        [
+          {
+            "node": "¿Tiene Lesiones?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Tiene Lesiones?": {
+      "main": [
+        [
+          {
+            "node": "Activar Modo Seguro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Modo Estándar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Activar Modo Seguro": {
+      "main": [
+        [
+          {
+            "node": "IA: Generador de Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modo Estándar": {
+      "main": [
+        [
+          {
+            "node": "IA: Generador de Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA: Generador de Plan": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Guardar Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
